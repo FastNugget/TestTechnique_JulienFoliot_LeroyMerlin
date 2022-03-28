@@ -32,7 +32,7 @@ public class FlyPlanController {
     public ResponseEntity<String> getFlyPlan() {
 
         // -- Draw & commit
-        return ResponseEntity.ok().body(this.flightPlanService.drawFlyPlan());
+        return ResponseEntity.ok().body(this.flightPlanService.getFlyPlan());
 
     }
 

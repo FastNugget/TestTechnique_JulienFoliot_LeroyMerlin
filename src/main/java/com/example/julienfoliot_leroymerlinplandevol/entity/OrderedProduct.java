@@ -18,8 +18,6 @@ public class OrderedProduct {
     @ManyToOne(fetch=FetchType.EAGER, cascade=CascadeType.ALL)
     private Order order;
 
-    @ManyToOne(fetch=FetchType.EAGER, cascade=CascadeType.ALL)
-    private Customer customer;
 
     private String productId;
     private long quantity;

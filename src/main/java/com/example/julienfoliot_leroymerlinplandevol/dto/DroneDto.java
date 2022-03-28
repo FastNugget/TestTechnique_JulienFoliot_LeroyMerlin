@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class DroneDto {
 
-    private Long id;
+    // -- Thanks lombok we love u
     private String droneid;
     private int autonomy;
     private int positionx;

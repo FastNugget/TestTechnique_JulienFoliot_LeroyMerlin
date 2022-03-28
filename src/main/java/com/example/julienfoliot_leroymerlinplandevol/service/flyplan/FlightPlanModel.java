@@ -17,9 +17,9 @@ import java.util.stream.Collectors;
 public class FlightPlanModel {
 
     // -- VARS
-    final private List<FlightActionAbstract> listFlightAction = new ArrayList<>();
-    private DroneDto droneDto;
-    private CustomerDto customerDto;
+    private List<FlightActionAbstract> flightSteps = new ArrayList<>();
+    private DroneDto drone;
+    private CustomerDto customer;
 
 
     // -- UTILS --------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ public class FlightPlanModel {
 
         // -- Get
         List<FlightActionMove> listMove
-            = this.listFlightAction.stream()
+            = this.flightSteps.stream()
                 .filter(unit-> unit instanceof FlightActionMove)
                     .map(unit-> FlightActionMove.class.cast(unit))
                             .collect(Collectors.toList());
@@ -40,9 +40,8 @@ public class FlightPlanModel {
         Collections.reverse(listMove);
 
         // -- Init
-        int total = 0;
-            int lastx = this.droneDto != null ? this.droneDto.getPositionx():0;
-            int lasty = this.droneDto != null ? this.droneDto.getPositiony():0;
+        int lastx = this.drone != null ? this.drone.getPositionx():0;
+        int lasty = this.drone != null ? this.drone.getPositiony():0;
 
         // -- Compute
         for(int offset = 0; offset< listMove.size(); offset++){
@@ -54,14 +53,14 @@ public class FlightPlanModel {
             if(offset == 0){
 
                 // -- Init
-                lastx = fam.getTox();
-                lasty = fam.getToy();
+                lastx = fam.getMoveDestinationX();
+                lasty = fam.getMoveDestinationY();
 
 
             }else{
 
                 // -- Add
-                total+= this.determineDelta(lastx, fam.getTox()) + this.determineDelta(lasty, fam.getToy());
+                totalDistanceToParcours+= this.determineDelta(lastx, fam.getMoveDestinationX()) + this.determineDelta(lasty, fam.getMoveDestinationY());
 
 
             }
@@ -69,7 +68,7 @@ public class FlightPlanModel {
         }
 
         // -- Commit
-        return total;
+        return totalDistanceToParcours;
 
     }
 

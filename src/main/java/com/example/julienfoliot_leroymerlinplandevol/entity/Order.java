@@ -17,4 +17,7 @@ public class Order {
     private Long id;
     private String orderid;
 
+    @ManyToOne(fetch=FetchType.EAGER, cascade=CascadeType.ALL)
+    private Customer customer;
+
 }

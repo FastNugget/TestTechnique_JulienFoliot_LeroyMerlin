@@ -8,10 +8,9 @@ create table store_products (store_id bigint not null, products_id bigint not nu
 
 create table customer (id bigint primary key not null, customerid varchar(50) not null unique, positionx int default 0, positiony int default 0);
 
-create table orders (id bigint primary key not null, orderid varchar(50) not null unique);
+create table orders (id bigint primary key not null, orderid varchar(50) not null unique, customer_id bigint not null, foreign key (customer_id) references customer,);
 
 create table orderedproduct (id bigint generated always as identity primary key not null,
   order_id bigint not null, foreign key (order_id) references orders,
-  customer_id bigint not null, foreign key (customer_id) references customer,
   productid varchar(50) not null,
   quantity bigint not null);

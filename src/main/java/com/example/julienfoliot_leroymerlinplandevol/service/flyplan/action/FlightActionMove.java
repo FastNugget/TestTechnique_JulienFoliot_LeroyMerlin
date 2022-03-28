@@ -9,8 +9,11 @@ import lombok.Setter;
 @AllArgsConstructor
 public class FlightActionMove extends FlightActionAbstract{
 
-    private int tox;
-    private int toy;
+    // -- VARS
+    private int moveDestinationX;
+    private int moveDestinationY;
+
+    // -- IMPL ---------------------------------------------------------------------------------------------------------
 
     @Override
     public FlightActionType getFlyActionType() {

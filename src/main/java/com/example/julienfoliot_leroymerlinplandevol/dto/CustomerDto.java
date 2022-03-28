@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class CustomerDto {
 
-    private Long id;
+    // -- Thanks lombok we love u
     private String customerid;
     private int positionx;
     private int positiony;

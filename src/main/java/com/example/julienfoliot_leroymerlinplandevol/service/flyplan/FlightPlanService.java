@@ -12,17 +12,13 @@ import com.example.julienfoliot_leroymerlinplandevol.service.flyplan.action.Flig
 import com.google.gson.Gson;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-@Configuration
+
 @Service
 public class FlightPlanService {
 
@@ -40,7 +36,7 @@ public class FlightPlanService {
     // -- CONSTRUCTOR --------------------------------------------------------------------------------------------------
     @Autowired
     public FlightPlanService(OrderedProductRepository orderedProductRepository, OrderRepository orderRepository,
-                             DroneRepository droneRepository, StoreRepository storeRepository, ModelMapper modelMapper, Gson gson) {
+                             DroneRepository droneRepository, StoreRepository storeRepository) {
 
         // -- Injec
         this.orderRepository = orderRepository;
@@ -49,15 +45,15 @@ public class FlightPlanService {
         this.storeRepository = storeRepository;
 
         // -- Inject utils
-        this.modelMapper = modelMapper;
-        this.gson = gson;
+        this.modelMapper = new ModelMapper();
+        this.gson = new Gson();
 
     }
 
 
     // -- OUTER CALLBACKS ----------------------------------------------------------------------------------------------
 
-    public String drawFlyPlan() {
+    public String getFlyPlan() {
 
         // -- Init
         String jsonToReturn;
@@ -71,7 +67,7 @@ public class FlightPlanService {
         List<StoreDto> listStore = this.storeRepository.findAllBy().stream().map(store -> this.modelMapper.map(store, StoreDto.class)).collect(Collectors.toList());
 
         // -- Draw & receive flight plan for each
-        List<FlightPlanModel> listFlightPlan = listOrderDto.stream().map(orderDto -> this.drawFlightPlans(orderDto, listStore)).collect(Collectors.toList());
+        List<FlightPlanModel> listFlightPlan = listOrderDto.stream().map(orderDto -> this.buildFlightPlans(orderDto, listStore)).collect(Collectors.toList());
 
         // -- Assign drones to flightPlans
         this.assignDroneOnFlightPlan(listFlightPlan, listDrone);
@@ -87,10 +83,14 @@ public class FlightPlanService {
 
     // -- INNER CALLBACKS ----------------------------------------------------------------------------------------------
 
-    private FlightPlanModel drawFlightPlans(OrderDto orderDto, List<StoreDto> listStore) {
+    private FlightPlanModel buildFlightPlans(OrderDto orderDto, List<StoreDto> listStore) {
 
         // -- Init
-        FlightPlanModel flightPlanModel = null;
+        FlightPlanModel flightPlanModel = new FlightPlanModel();
+        CustomerDto customerDto = orderDto.getCustomer();
+
+        // -- Prepare here to add product on the fly
+        FlightActionDeliver flightActionDeliver = new FlightActionDeliver(customerDto.getCustomerid());
 
         // -- Get product in order
         List<OrderedProductDto> listOrderedProduct
@@ -98,7 +98,6 @@ public class FlightPlanService {
                 .stream().map(orderedProduct -> this.modelMapper.map(orderedProduct, OrderedProductDto.class))
                 .collect(Collectors.toList());
 
-        CustomerDto customerDto = listOrderedProduct.get(0).getCustomer();
         List<FlightActionAbstract> listFlightAction = new ArrayList<>();
 
         for (int offset_A = 0; offset_A < listOrderedProduct.size(); offset_A++) {
@@ -111,15 +110,22 @@ public class FlightPlanService {
                     .filter(storeDto -> storeDto.getProducts().stream().map(productDto -> productDto.getProductid()).collect(Collectors.toList()).contains(orderProductUnit.getProductId()))
                     .findFirst().orElse(null);
 
+            // -- Add to final deliver list
+            flightActionDeliver.addProductInList(orderProductUnit.getProductId());
+
             // -- Add to package
             listFlightAction.add(new FlightActionMove(storeDtoChoose.getPositionx(), storeDtoChoose.getPositiony()));
-            listFlightAction.add(new FlightActionPickup());
+            listFlightAction.add(new FlightActionPickup(storeDtoChoose.getStoreid(), orderProductUnit.getProductId()));
 
         }
 
         // -- Add move & deliver
         listFlightAction.add(new FlightActionMove(customerDto.getPositionx(), customerDto.getPositiony()));
-        listFlightAction.add(new FlightActionDeliver());
+        listFlightAction.add(flightActionDeliver);
+
+        // -- Build
+        flightPlanModel.setCustomer(customerDto);
+        flightPlanModel.setFlightSteps(listFlightAction);
 
         // -- Return
         return flightPlanModel;
@@ -131,37 +137,29 @@ public class FlightPlanService {
         // -- Loop over flightPlanModel
         listFlightPlan.forEach(flightPlanModel -> {
 
-            // -- Init
-            AtomicInteger distance = null;
-            AtomicReference<DroneDto> choosenDrone = null;
+            // -- Loop over drone
+            for (DroneDto droneUnit : listDrones){
 
-            // -- Work
-            listDrones.forEach(droneDto -> {
+                // -- Check
+                if(droneUnit.getAutonomy() >= flightPlanModel.getTotalDistanceToParcours()){
 
-                flightPlanModel.setDroneDto(droneDto);
-                int tmpDistance = flightPlanModel.getTotalDistanceToParcours();
+                    // -- Assign drone
+                    flightPlanModel.setDrone(droneUnit);
 
-                if ((distance == null || tmpDistance < distance.get()) && tmpDistance < droneDto.getAutonomy()) {
+                    // -- Recompute drone autonomy
+                    droneUnit.setAutonomy(droneUnit.getAutonomy() - flightPlanModel.getTotalDistanceToParcours());
 
-                    choosenDrone.set(droneDto);
-                    distance.set(tmpDistance);
-
+                    // -- Stop loop
+                    break;
                 }
 
-            });
+            }
 
         });
-
 
     }
 
 
-    // -- HARICOT ------------------------------------------------------------------------------------------------------
 
-    @Bean
-    public ModelMapper modelMapper() {return new ModelMapper();}
-
-    @Bean
-    public Gson gson() {return new Gson();}
 
 }
